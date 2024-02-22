@@ -3,7 +3,7 @@ const { product } = require("../db");
 const prisma = new PrismaClient();
 const router = require("express").Router();
 
-// admin can view any customers/admin orders based on the input id
+// admin can view any customers/admin onprders based on the input id
 router.post("/customer", async (req, res, next) => {
   try {
     if (!req.user) {
