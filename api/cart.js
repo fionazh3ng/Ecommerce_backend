@@ -1,13 +1,19 @@
 const { PrismaClient } = require("@prisma/client");
-
 const prisma = new PrismaClient();
 const router = require("express").Router();
+
+router.use((req, res, next) => {
+  if (!req.user) {
+    return res.status(401).send("You must be logged in to do that.");
+  }
+  next();
+});
 
 router.get("/", async (req, res, next) => {
   try {
     const cart = await prisma.cart.findMany({
       where: {
-        userid: Number(1),
+        userid: req.user.id,
       },
     });
     let result = [];
@@ -27,41 +33,84 @@ router.get("/", async (req, res, next) => {
   }
 });
 
-// router.get("/:id", async (req, res, next) => {
-//     try {
-//       const cart = await prisma.cart.findFirst({
-//         where: {
-//           productid:Number(req.params.id),
-//         },
-//       });
-//       res.send(cart);
-//     } catch (error) {
-//       next(error);
-//     }
-//   });
-
 router.post("/", async (req, res, next) => {
+  //add to cart
   try {
     const add = await prisma.cart.create({
       data: {
         userid: req.user.id,
-        productid: req.body.id,
+        productid: req.body.productid,
       },
     });
-    return res.send(add);
+    const cart = await prisma.cart.findMany({
+      where: {
+        userid: req.user.id,
+      },
+    });
+    let result = [];
+    for (let x of cart) {
+      result.push({
+        ...x,
+        productDescription: await prisma.products.findFirst({
+          where: {
+            id: x.productid,
+          },
+        }),
+      });
+    }
+    res.send(result);
   } catch (error) {
     next(error);
   }
 });
 
 router.delete("/", async (req, res, next) => {
+  //delete one item in cart
   try {
-    const checkout = await prisma.cart.delete({
+    const findCheckoutId = await prisma.cart.findFirst({
       where: {
-        productid: req.body.id,
+        productid: Number(req.body.productid),
+        userid: req.user.id,
       },
     });
-    return res.send(checkout);
+    const checkout = await prisma.cart.delete({
+      where: {
+        id: findCheckoutId.id,
+      },
+    });
+    // return res.send(checkout);
+    const cart = await prisma.cart.findMany({
+      where: {
+        userid: req.user.id,
+      },
+    });
+    let result = [];
+    for (let x of cart) {
+      result.push({
+        ...x,
+        productDescription: await prisma.products.findFirst({
+          where: {
+            id: x.productid,
+          },
+        }),
+      });
+    }
+    res.send(result);
+  } catch (error) {
+    next(error);
+  }
+});
+router.post("/sessionCart", async (req, res, next) => {
+  try {
+    const session = await prisma.cart.createMany({
+      data: req.body.cart,
+    });
+    const cart = await prisma.cart.findMany({
+      where: {
+        userid: req.user.id,
+      },
+    });
+    return res.send({ cart });
   } catch (error) {
     next(error);
   }

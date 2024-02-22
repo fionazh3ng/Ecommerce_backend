@@ -2,11 +2,12 @@
 // const prisma = new prismaClient();
 const { Client } = require("pg");
 const { product, descriptions, prices, url } = require("./index.js");
+const bcrypt = require("bcrypt");
 
 const client = new Client({
   connectionString:
     process.env.DATABASE_URL ||
-    "postgresql://fionazh3ng@localhost:5432/ecommerce?schema=public",
+    "postgresql://fionazh3ng@localhost:5432/ecommerce",
   ssl:
     process.env.NODE_ENV === "production"
       ? { rejectUnauthorized: false }
@@ -48,7 +49,7 @@ async function createTables() {
         CREATE TABLE products (
           id SERIAL PRIMARY KEY,
           name varchar(255) NOT NULL,
-          url varchar(255) NOT NULL,
+          url Text NOT NULL,
           description varchar(255) NOT NULL,
           price FLOAT NOT NULL
         );
@@ -83,26 +84,26 @@ async function createTables() {
 async function createInitialUsers() {
   try {
     console.log("Starting to create users...");
-
+    const salt = await bcrypt.genSalt(10);
     await createUser({
       firstName: "qiao",
       lastName: "chen",
       email: "qiao@gmail.com",
-      password: "123",
+      password: await bcrypt.hash("123", salt),
       isAdmin: true,
     });
     await createUser({
       firstName: "fiona",
       lastName: "zheng",
       email: "fiona@gmail.com",
-      password: "123",
+      password: await bcrypt.hash("123", salt),
       isAdmin: true,
     });
     await createUser({
       firstName: "malik",
       lastName: "garvin",
       email: "malik@gmail.com",
-      password: "123",
+      password: await bcrypt.hash("123", salt),
       isAdmin: true,
     });
 
@@ -120,7 +121,7 @@ async function createInitialProducts() {
     for (let i = 0; i < 48; i++) {
       await createProduct({
         name: product[i],
-        url: url,
+        url: url[i],
         description: descriptions[i],
         price: prices[i],
       });
